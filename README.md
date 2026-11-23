@@ -372,3 +372,6 @@ Quick summary:
 
 <!-- handsoff-issue-1025 -->
 - #1025: No database indexes on foreign keys
+
+<!-- handsoff-issue-1326 -->
+- #1326: Implement Course Bundle Discount Pricing
