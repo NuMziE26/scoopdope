@@ -372,3 +372,6 @@ Quick summary:
 
 <!-- handsoff-issue-1025 -->
 - #1025: No database indexes on foreign keys
+
+<!-- handsoff-issue-1321 -->
+- #1321: Add Buyback Contract Scheduled Execution
