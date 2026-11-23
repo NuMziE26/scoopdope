@@ -375,3 +375,6 @@ Quick summary:
 
 <!-- handsoff-issue-1326 -->
 - #1326: Implement Course Bundle Discount Pricing
+
+<!-- handsoff-issue-1327 -->
+- #1327: Add Coupon Code System
