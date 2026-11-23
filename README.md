@@ -378,3 +378,6 @@ Quick summary:
 
 <!-- handsoff-issue-1335 -->
 - #1335: Add Announcement System for Instructors
+
+<!-- handsoff-issue-1336 -->
+- #1336: Implement User Deactivation and Reactivation
