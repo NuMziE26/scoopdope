@@ -378,3 +378,6 @@ Quick summary:
 
 <!-- handsoff-issue-1327 -->
 - #1327: Add Coupon Code System
+
+<!-- handsoff-issue-1328 -->
+- #1328: Implement Waitlist Auto-Enrollment
