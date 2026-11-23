@@ -1,17 +1,23 @@
 {
-  "name": "handsoff-app",
-  "version": "1.0.0",
+  "name": "handsoff",
+  "version": "0.1.0",
   "private": true,
+  "description": "Handsoff monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "jest",
-    "mutation": "stryker run"
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "pino": "^9.0.0",
+    "pino-http": "^10.0.0"
+  }
 }
