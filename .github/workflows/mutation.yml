@@ -89,7 +89,7 @@ jobs:
         run: npm ci
 
       - name: Run mutation testing
-        run: npm run test:mutation
+        run: npx stryker run
 
       - name: Upload HTML mutation report
         if: always()

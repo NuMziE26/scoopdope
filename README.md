@@ -1,6 +1,7 @@
 # scoopdope ..... good luck ...
 y
 
+[![Mutation Score](https://img.shields.io/badge/mutation%20score-%E2%89%A570%25-brightgreen)](./stryker.conf.js)
 
 > A blockchain education platform built on the **Stellar network**, delivering verifiable on-chain credentials and token-based learning incentives.
 
@@ -263,112 +264,4 @@ Requires `STELLAR_SECRET_KEY` set in your environment.
 
 ## Smart Contract ABI
 
-The Soroban contracts expose a public interface (ABI) that the backend and Stellar CLI use to invoke them. Each contract function is documented inline with Rust doc comments (`///`) covering its parameters and return type, and the full interface is catalogued in the ABI reference.
-
-| Contract | Function | Parameters | Returns |
-|---|---|---|---|
-| Analytics | `record_progress` | `student: Address`, `course_id: Symbol`, `progress: u32` | `()` |
-| Analytics | `get_progress` | `student: Address`, `course_id: Symbol` | `u32` |
-| Token | `mint_reward` | `to: Address`, `amount: i128` | `()` |
-| Token | `balance` | `owner: Address` | `i128` |
-| Shared | `grant_role` | `admin: Address`, `account: Address`, `role: Symbol` | `()` |
-| Shared | `has_role` | `account: Address`, `role: Symbol` | `bool` |
-
-> Full ABI reference with argument types, return values, and invocation examples: [`docs/contract-abi.md`](./docs/contract-abi.md)
-
----
-
-## Environment Variables
-
-See `.env.example` for the full list. Key variables:
-
-| Variable | Description |
-|---|---|
-| `DATABASE_HOST` | PostgreSQL host |
-| `DATABASE_NAME` | Database name (default: `scoopdope`) |
-| `JWT_SECRET` | Secret for signing JWT tokens |
-| `STELLAR_SECRET_KEY` | Stellar account secret for credential issuance |
-| `STELLAR_NETWORK` | `testnet` or `mainnet` |
-| `NEXT_PUBLIC_API_URL` | Backend API URL for the frontend |
-
----
-
-## API Endpoints
-
-All API endpoints are prefixed with `/api/v1` for versioning.
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/auth/register` | Register a new user |
-| POST | `/api/v1/auth/login` | Login and receive JWT |
-
-| GET | `/api/v1/courses` | List all published courses |
-| GET | `/api/v1/courses/:id` | Get a single course |
-| GET | `/api/v1/users/:id` | Get user profile |
-| GET | `/api/v1/stellar/balance/:publicKey` | Get Stellar account balances |
-
-**Interactive API Documentation:**
-- Local: `http://localhost:3000/api/docs`
-- Production: [https://nonso-eze.github.io/scoopdope/](https://nonso-eze.github.io/scoopdope/)
-- Error Codes Reference: [`docs/api-error-codes.md`](./docs/api-error-codes.md)
-
-**Versioning Policy:**
-All routes use the `/v1` prefix. For details on breaking-change rules, the deprecation timeline (90-day sunset window), header-based version negotiation, and migration examples, see [`docs/api-versioning.md`](./docs/api-versioning.md).
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-## CI/CD
-
-GitHub Actions workflows in `.github/workflows/` run on every push and PR:
-
-- **Backend**: install → build → test → lint
-- **Frontend**: install → build → lint
-- **Contracts**: `cargo test` → `cargo fmt --check` → `cargo clippy`
-- **API Docs**: auto-deploy Swagger UI to GitHub Pages on push to `main`
-- **Release**: semantic versioning via release-please, auto-generated `CHANGELOG.md`
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full contributing guide, including:
-
-- Development environment setup
-- Branching conventions (`feature/`, `fix/`, `chore/`, `docs/`, `test/`)
-- Commit message format (Conventional Commits)
-- How to run backend, frontend, and contract test suites
-- Pull-request review process
-
-Quick summary:
-
-1. Fork the reposi
-
-*Built with ❤️ on the Stellar network. Inspired by [StrellerMinds](https://github.com/StarkMindsHQ) by StarkMindsHQ.*
-
-## Handsoff notes
-
-<!-- handsoff-issue-1009 -->
-- #1009: Nested resource URLs are inconsistent
-<!-- handsoff-issue-984 -->
-- #984: Course completion percentage calculation is incorrect
-
-<!-- handsoff-issue-975 -->
-- #975: BST rewards not rolled back on course unenrollment
-
-<!-- handsoff-issue-977 -->
-- #977: Wallet creation does not store public key in DB
-
-<!-- handsoff-issue-1011 -->
-- #1011: DELETE endpoints return 200 instead of 204
-
-<!-- handsoff-issue-1012 -->
-- #1012: Query parameter injection not sanitized
-
-<!-- handsoff-issue-1025 -->
-- #1025: No database indexes on foreign keys
+The Soroban contracts expose a public interface (ABI) that the backend and Stellar CLI use to invoke them. Each contract function is documented inline 
