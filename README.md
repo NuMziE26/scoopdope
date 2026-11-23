@@ -375,3 +375,6 @@ Quick summary:
 
 <!-- handsoff-issue-1334 -->
 - #1334: Implement Bookmarks and Learning Lists
+
+<!-- handsoff-issue-1335 -->
+- #1335: Add Announcement System for Instructors
