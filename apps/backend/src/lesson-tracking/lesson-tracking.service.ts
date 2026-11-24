@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Interval } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository, LessThanOrEqual, GreaterThanOrEqual } from 'typeorm';
 import { StudySession } from './study-session.entity';
 import { LessonTimeStat } from './lesson-time-stat.entity';
@@ -34,6 +35,7 @@ export class LessonTrackingService {
     @InjectRepository(LessonTimeStat) private statsRepo: Repository<LessonTimeStat>,
     @InjectRepository(LessonProgress) private progressRepo: Repository<LessonProgress>,
     @InjectRepository(Lesson) private lessonRepo: Repository<Lesson>,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -161,7 +163,56 @@ export class LessonTrackingService {
 
     const saved = await this.progressRepo.save(progress);
 
+    // Emit streak update so badge listeners can evaluate streak milestones.
+    this.eventEmitter.emit('streak.updated', {
+      userId,
+      currentStreak: await this.getCurrentStreak(userId),
+    });
+
     return this.toProgressResponse(saved);
+  }
+
+  /**
+   * Compute the learner's current consecutive-day study streak based on
+   * lesson progress activity. Returns 0 when there is no recent activity.
+   */
+  async getCurrentStreak(userId: string): Promise<number> {
+    const rows = await this.progressRepo
+      .createQueryBuilder('p')
+      .select("DISTINCT TO_CHAR(p.updatedAt, 'YYYY-MM-DD')", 'day')
+      .where('p.userId = :userId', { userId })
+      .orderBy('day', 'DESC')
+      .getRawMany<{ day: string }>();
+
+    if (!rows || rows.length === 0) {
+      return 0;
+    }
+
+    const days = rows.map((r) => r.day);
+    const today = new Date();
+    const toKey = (d: Date) => d.toISOString().slice(0, 10);
+
+    // The streak must include today (or yesterday) to still be active.
+    const todayKey = toKey(today);
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayKey = toKey(yesterday);
+
+    if (days[0] !== todayKey && days[0] !== yesterdayKey) {
+      return 0;
+    }
+
+    let streak = 1;
+    let cursor = new Date(`${days[0]}T00:00:00.000Z`);
+    for (let i = 1; i < days.length; i++) {
+      const expected = toKey(new Date(cursor.getTime() - 24 * 60 * 60 * 1000));
+      if (days[i] !== expected) {
+        break;
+      }
+      streak += 1;
+      cursor = new Date(`${days[i]}T00:00:00.000Z`);
+    }
+
+    return streak;
   }
 
   /**

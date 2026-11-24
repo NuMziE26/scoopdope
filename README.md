@@ -374,3 +374,12 @@ Quick summary:
 
 <!-- handsoff-issue-1025 -->
 - #1025: No database indexes on foreign keys
+
+<!-- handsoff-issue-1334 -->
+- #1334: Implement Bookmarks and Learning Lists
+
+<!-- handsoff-issue-1335 -->
+- #1335: Add Announcement System for Instructors
+
+<!-- handsoff-issue-1336 -->
+- #1336: Implement User Deactivation and Reactivation
