@@ -45,6 +45,8 @@ export const options = {
 };
 
 const RANGE_HEADER = 'bytes=0-999999';
+const SEEK_RANGE_HEADER = 'bytes=1048576-1049599';
+const INVALID_RANGE_HEADER = 'bytes=999999999999-1000000000000';
 
 const BASE_URL = __ENV.API_URL || 'http://localhost:3000';
 const API_PREFIX = '/api/v1';
@@ -148,6 +150,44 @@ export default function (data) {
       'content-length matches body': (r) =>
         parseInt(r.headers['Content-Length'], 10) === r.body.length,
       'range response time ok': (r) => r.timings.duration < 1000,
+    });
+  });
+
+  sleep(1);
+
+  group('Seek to middle of video', () => {
+    if (lessonIds.length === 0) return;
+    const lessonId = lessonIds[__VU % lessonIds.length];
+    const res = http.get(`${BASE_URL}/v1/lessons/${lessonId}/video`, {
+      headers: { ...headers, Range: SEEK_RANGE_HEADER },
+      tags: { endpoint: 'video_seek' },
+    });
+
+    check(res, {
+      'seek returns 206': (r) => r.status === 206,
+      'seek content-range present': (r) => !!r.headers['Content-Range'],
+      'seek content-range starts at offset': (r) =>
+        /^bytes 1048576-\d+\/\d+$/.test(r.headers['Content-Range'] || ''),
+      'seek content-length matches body': (r) =>
+        parseInt(r.headers['Content-Length'], 10) === r.body.length,
+      'seek response time ok': (r) => r.timings.duration < 1000,
+    });
+  });
+
+  sleep(1);
+
+  group('Invalid range rejected', () => {
+    if (lessonIds.length === 0) return;
+    const lessonId = lessonIds[__VU % lessonIds.length];
+    const res = http.get(`${BASE_URL}/v1/lessons/${lessonId}/video`, {
+      headers: { ...headers, Range: INVALID_RANGE_HEADER },
+      tags: { endpoint: 'video_invalid_range' },
+    });
+
+    check(res, {
+      'invalid range returns 416': (r) => r.status === 416,
+      'unsatisfiable content-range present': (r) =>
+        /^bytes \*\/\d+$/.test(r.headers['Content-Range'] || ''),
     });
   });
 
