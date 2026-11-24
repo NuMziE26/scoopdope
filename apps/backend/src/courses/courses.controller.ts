@@ -30,6 +30,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { AccessControlGuard } from '../access-control/access-control.guard';
 import { CourseQueryDto } from './dto/course-query.dto';
 import { ScheduleCourseDto } from './dto/schedule-course.dto';
 import { AuditService } from '../audit/audit.service';
@@ -89,7 +90,8 @@ export class CoursesController {
     name: 'language',
     required: false,
     enum: ['en', 'fr', 'ar', 'es'],
-    description: 'Filter by ISO 639-1 language code (en, fr, ar, es)',
+    description:
+      'Filter by ISO 639-1 language code (en, fr, ar, es). Returns only courses whose content is in the requested language.',
   })
   @ApiQuery({
     name: 'categoryId',
@@ -211,7 +213,7 @@ export class CoursesController {
   }
 
   @Get(':id')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard, AccessControlGuard)
   @ApiOperation({ summary: 'Get a course by ID' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -237,6 +239,11 @@ export class CoursesController {
         timestamp: '2024-01-01T00:00:00.000Z',
       },
     },
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - course visibility (enrolled_only/private) does not permit the requester',
   })
   @ApiResponse({
     status: 404,
@@ -356,6 +363,52 @@ export class CoursesController {
     return { created: created.length, failed: errors.length, errors };
   }
 
+  @Post(':id/variants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'instructor')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create a linked language variant of an existing course',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        language: 'es',
+        title: 'Introducción a Stellar',
+        description: 'Aprende los fundamentos de Stellar',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Language variant created and linked to the source course',
+    schema: { example: { id: 'uuid', language: 'es', variantOfId: 'uuid' } },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or unsupported language' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Source course not found' })
+  @ApiResponse({ status: 409, description: 'A variant in this language already exists' })
+  async createVariant(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Request() req: { user?: { id: string; role: string } },
+  ) {
+    const language = this.normalizeLanguage(data?.language);
+    if (!language) {
+      throw new BadRequestException('language is required');
+    }
+    const course = await this.coursesService.createVariant(id, { ...data, language }, req.user);
+    await this.auditService.log({
+      userId: req.user?.id,
+      action: AuditAction.COURSE_CREATE,
+      entityType: 'course',
+      entityId: course?.id,
+      metadata: { title: course?.title, language, variantOfId: id },
+    });
+    return course;
+  }
+
   @Patch(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'instructor')
@@ -377,6 +430,31 @@ export class CoursesController {
       entityType: 'course',
       entityId: course?.id,
       metadata: { status: CourseStatus.PUBLISHED },
+    });
+    return course;
+  }
+
+  @Patch(':id/submit-review')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'instructor')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Submit a draft course for moderation review' })
+  @ApiResponse({ status: 200, description: 'Course submitted for review' })
+  @ApiResponse({ status: 400, description: 'Course is not in a submittable state' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  async submitForReview(
+    @Param('id') id: string,
+    @Request() req: { user?: { id: string; role: string } },
+  ) {
+    const course = await this.coursesService.submitForReview(id, req.user);
+    await this.auditService.log({
+      userId: req.user?.id,
+      action: AuditAction.COURSE_UPDATE,
+      entityType: 'course',
+      entityId: course?.id,
+      metadata: { status: CourseStatus.UNDER_REVIEW },
     });
     return course;
   }

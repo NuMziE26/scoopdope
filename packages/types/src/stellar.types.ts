@@ -49,3 +49,38 @@ export interface OnChainCredential {
   issuedAt: number;
   txHash: string;
 }
+
+/**
+ * Client-side wallet state used by the profile wallet UI.
+ */
+export interface WalletState {
+  status: WalletConnectionStatus;
+  publicKey: string | null;
+  balance: StellarBalance[] | null;
+  error?: string | null;
+}
+
+/**
+ * Response returned when fetching a wallet's balance.
+ */
+export interface WalletBalanceResponse {
+  publicKey: string;
+  balances: StellarBalance[];
+}
+
+/**
+ * On-chain verification status of a credential.
+ */
+export type CredentialOnChainStatus = 'verified' | 'pending' | 'failed' | 'not_found';
+
+/**
+ * Response returned by the public credential verification endpoint.
+ */
+export interface VerifyCredentialResponse {
+  learnerName: string;
+  courseName: string;
+  issuedAt: number;
+  onChainStatus: CredentialOnChainStatus;
+  txHash: string;
+  stellarPublicKey: string;
+}
