@@ -2,12 +2,12 @@
 # The lint level for crates which do not have a detectable license
 unlicensed = "deny"
 # The lint level used when no other predicates are matched
-default = "warn"
+default = "deny"
 # The confidence threshold for advisories, any advisory with a confidence
 # lower than this will be ignored
 vulnerability = "deny"
-unmaintained = "warn"
-notice = "warn"
+unmaintained = "deny"
+notice = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 #
@@ -29,7 +29,9 @@ ignore = []
 [licenses]
 # The lint level for crates which do not have a detectable license
 unlicensed = "deny"
-# List of explicitly allowed licenses
+# List of explicitly allowed licenses. Only permissive licenses are allowed;
+# the BSD and Unicode entries are required transitively by the soroban-sdk
+# dependency tree.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -42,9 +44,9 @@ allow = [
 # List of explicitly disallowed licenses
 deny = ["GPL-2.0", "GPL-3.0", "AGPL-3.0"]
 # Lint level for licenses considered copyleft
-copyleft = "warn"
+copyleft = "deny"
 # Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
-allow-osi-fsf-free = "both"
+allow-osi-fsf-free = "neither"
 # Lint level used when no other predicates are matched
 default = "deny"
 # The confidence threshold for detecting a license from license text.
@@ -52,11 +54,11 @@ confidence-threshold = 0.8
 
 [bans]
 # Lint level for when multiple versions of the same crate are detected
-multiple-versions = "warn"
+multiple-versions = "deny"
 # Lint level for when an unmaintained crate is detected
-unmaintained = "warn"
+unmaintained = "deny"
 # Lint level for when a crate with security notices is detected
-notice = "warn"
+notice = "deny"
 # A list of explicitly allowed duplicate crates
 allow = []
 # A list of explicitly disallowed duplicate crates
@@ -68,9 +70,9 @@ skip-tree = []
 
 [sources]
 # Lint level for what to happen when a crate from a crate registry that is not in the allow list is detected
-unknown-registry = "warn"
+unknown-registry = "deny"
 # Lint level for what to happen when a crate from a git repository that is not in the allow list is detected
-unknown-git = "warn"
+unknown-git = "deny"
 # List of allowed crate registries
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # List of allowed Git repositories

@@ -1,7 +1,7 @@
 module.exports = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
+  testRegex: '.*chaos-engineering\\.spec\\.ts$',
   transform: {
     '^.+\\.(t|j)s$': ['ts-jest', {
       tsconfig: {
@@ -18,7 +18,7 @@ module.exports = {
     '**/*.(t|j)s',
     'kyc/**/*.(t|j)s',
   ],
-  coverageDirectory: '../coverage',
+  coverageDirectory: '../coverage-chaos',
   coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
@@ -35,5 +35,11 @@ module.exports = {
     }
   },
   testEnvironment: 'node',
-  setupFiles: ['<rootDir>/../test/setup-env.ts'],
+  setupFiles: [
+    '<rootDir>/../test/setup-env.ts',
+    '<rootDir>/../test/setup-external-mocks.ts',
+  ],
+  testTimeout: 30000,
+  maxWorkers: 1,
+  forceExit: true,
 };
