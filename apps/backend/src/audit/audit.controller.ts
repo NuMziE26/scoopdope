@@ -12,6 +12,45 @@ import { AuditService } from './audit.service';
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
+  @Get('admin/audit-log')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Get audit logs with pagination and filters (admin only)' })
+  @ApiResponse({ status: 200, description: 'Paginated audit logs' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  @ApiQuery({ name: 'action', required: false, description: 'Filter by action type (e.g. "user.delete", "course.approve")' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by actor user UUID' })
+  @ApiQuery({ name: 'resourceType', required: false, description: 'Filter by resource type (e.g. "user", "course")' })
+  @ApiQuery({ name: 'resourceId', required: false, description: 'Filter by resource UUID' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Filter entries on or after this ISO date' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'Filter entries on or before this ISO date' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Page size (default 50)' })
+  getAdminAuditLog(
+    @Query('action') action?: string,
+    @Query('userId') userId?: string,
+    @Query('resourceType') resourceType?: string,
+    @Query('resourceId') resourceId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.auditService.getLogs({
+      userId,
+      action,
+      resourceType,
+      resourceId,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 50,
+    });
+  }
+
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'Get audit logs with pagination and filters (admin only)' })

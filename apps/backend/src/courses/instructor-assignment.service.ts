@@ -10,6 +10,9 @@ import { CourseInstructor } from './course-instructor.entity';
 import { Course } from './course.entity';
 import { User } from '../users/user.entity';
 
+/** Default revenue share percentage for instructors. */
+export const DEFAULT_REVENUE_SHARE_PERCENT = 70;
+
 @Injectable()
 export class InstructorAssignmentService {
   constructor(
@@ -111,5 +114,80 @@ export class InstructorAssignmentService {
       relations: ['course'],
       order: { assignedAt: 'DESC' },
     });
+  }
+
+  /**
+   * Get the configured revenue share percentage for an instructor.
+   *
+   * @throws NotFoundException – instructor not found or has no assignment record
+   */
+  async getRevenueShare(instructorId: string): Promise<number> {
+    const user = await this.userRepo.findOne({ where: { id: instructorId } });
+    if (!user) {
+      throw new NotFoundException(`Instructor ${instructorId} not found`);
+    }
+
+    const assignment = await this.assignmentRepo.findOne({
+      where: { instructorId },
+      order: { assignedAt: 'ASC' },
+    });
+    if (!assignment) {
+      throw new NotFoundException(
+        `No revenue share record found for instructor ${instructorId}`,
+      );
+    }
+
+    return assignment.revenueSharePercent ?? DEFAULT_REVENUE_SHARE_PERCENT;
+  }
+
+  /**
+   * Update the revenue share percentage for an instructor across all assignments.
+   *
+   * @throws NotFoundException  – instructor not found or has no assignment record
+   * @throws BadRequestException – percent is not within 0..100
+   */
+  async updateRevenueShare(instructorId: string, percent: number): Promise<number> {
+    if (
+      typeof percent !== 'number' ||
+      Number.isNaN(percent) ||
+      percent < 0 ||
+      percent > 100
+    ) {
+      throw new BadRequestException(
+        `Revenue share percent must be between 0 and 100`,
+      );
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: instructorId } });
+    if (!user) {
+      throw new NotFoundException(`Instructor ${instructorId} not found`);
+    }
+
+    const assignments = await this.assignmentRepo.find({
+      where: { instructorId },
+    });
+    if (assignments.length === 0) {
+      throw new NotFoundException(
+        `No revenue share record found for instructor ${instructorId}`,
+      );
+    }
+
+    for (const assignment of assignments) {
+      assignment.revenueSharePercent = percent;
+    }
+    await this.assignmentRepo.save(assignments);
+
+    return percent;
+  }
+
+  /**
+   * Calculate the instructor's payout for a given amount using the configured
+   * revenue share percentage.
+   *
+   * @throws NotFoundException – instructor not found or has no assignment record
+   */
+  async calculatePayout(amount: number, instructorId: string): Promise<number> {
+    const percent = await this.getRevenueShare(instructorId);
+    return Math.round(amount * percent) / 100;
   }
 }

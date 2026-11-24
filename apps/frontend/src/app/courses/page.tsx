@@ -13,6 +13,7 @@ import { CourseSkeletonCard } from '@/components/courses/CourseSkeletonCard';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { CourseFilters } from '@/components/courses/CourseFilters';
 import { SearchBar } from '@/components/ui/SearchBar';
+import { LANGUAGE_OPTIONS } from '@/lib/languages';
 import { useCoursesFilter } from './useCoursesFilter';
 import api from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -29,6 +30,11 @@ export default function CoursesPage() {
     applyFilter, clearAll, activeFilters,
     courses, error, isLoading, isLoadingMore, hasMore, size, setSize,
   } = useCoursesFilter();
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    applyFilter({ language: e.target.value });
+    setSize(1);
+  };
 
   useEffect(() => { fetchBookmarks(); }, [fetchBookmarks]);
   useEffect(() => { api.get('/bundles').then((r) => setBundles(r.data)).catch(() => {}); }, []);
@@ -78,6 +84,23 @@ export default function CoursesPage() {
           placeholder="Search courses…"
           debounceMs={300}
         />
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="language-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Language
+          </label>
+          <select
+            id="language-filter"
+            value={language ?? ''}
+            onChange={handleLanguageChange}
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+          >
+            <option value="">All languages</option>
+            {LANGUAGE_OPTIONS.map((opt) => (
+              <option key={opt.code} value={opt.code}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
 
         <CourseFilters level={level} language={language} category={category} duration={duration} price={price} sort={sort} instructor={instructor} minRating={minRating} enrollmentRange={enrollmentRange} dateRange={dateRange} onChange={applyFilter} />
 

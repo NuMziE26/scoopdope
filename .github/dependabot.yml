@@ -13,6 +13,11 @@ updates:
       include: "scope"
     pull-request-branch-name:
       separator: "/"
+    groups:
+      patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
 
   # Frontend npm dependencies
   - package-ecosystem: npm
@@ -32,9 +37,9 @@ updates:
     pull-request-branch-name:
       separator: "/"
     groups:
-      minor-and-patch:
-        dependency-types:
-          - "minor"
+      patch-updates:
+        applies-to: version-updates
+        update-types:
           - "patch"
     allow:
       - dependency-type: "direct"
@@ -58,9 +63,9 @@ updates:
     pull-request-branch-name:
       separator: "/"
     groups:
-      minor-and-patch:
-        dependency-types:
-          - "minor"
+      patch-updates:
+        applies-to: version-updates
+        update-types:
           - "patch"
     allow:
       - dependency-type: "direct"
@@ -84,9 +89,9 @@ updates:
     pull-request-branch-name:
       separator: "/"
     groups:
-      minor-and-patch:
-        dependency-types:
-          - "minor"
+      patch-updates:
+        applies-to: version-updates
+        update-types:
           - "patch"
     allow:
       - dependency-type: "direct"
@@ -107,3 +112,8 @@ updates:
     commit-message:
       prefix: "chore(ci):"
       include: "scope"
+    groups:
+      patch-updates:
+        applies-to: version-updates
+        update-types:
+          - "patch"
