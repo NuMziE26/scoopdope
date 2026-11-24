@@ -36,9 +36,9 @@ const config = {
   ],
   thresholds: {
     high: 80,
-    medium: 60,
-    low: 40,
-    break: 60,
+    medium: 70,
+    low: 50,
+    break: 70,
   },
   timeoutMS: 5000,
   timeoutFactor: 1.25,
