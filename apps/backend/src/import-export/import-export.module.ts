@@ -4,6 +4,8 @@ import { MulterModule } from '@nestjs/platform-express';
 import { Course } from '../courses/course.entity';
 import { CourseModule } from '../courses/course-module.entity';
 import { Lesson } from '../courses/lesson.entity';
+import { Quiz } from '../courses/quiz.entity';
+import { QuizQuestion } from '../courses/quiz-question.entity';
 import { ImportJob } from './import-job.entity';
 import { DataExportJob } from './data-export-job.entity';
 import { ImportExportService } from './import-export.service';
