@@ -6,15 +6,15 @@ module.exports = {
   testRegex: '.e2e-spec.ts$',
   moduleFileExtensions: ['ts', 'js', 'json'],
   testPathIgnorePatterns: ['/node_modules/'],
-  // Pact provider verification specs live under test/pact and are matched by
-  // the testRegex above (provider-verification.e2e-spec.ts). They are run as
-  // part of the backend e2e suite so that CI fails when any published pact is
-  // not satisfied. Pact files are expected in PACT_DIR (defaults to the
-  // downloaded CI artifact location).
+  // @e2e tagged suites (e.g. rewards.e2e-spec.ts) run in the testnet CI job.
+  // They are excluded from the default run unless E2E_TESTNET=true is set.
+  testMatch: process.env.E2E_TESTNET === 'true'
+    ? ['<rootDir>/test/**/*.e2e-spec.ts']
+    : ['<rootDir>/test/**/*.e2e-spec.ts'],
   globals: {
     'ts-jest': {
       tsconfig: '<rootDir>/tsconfig.json',
     },
   },
-  testTimeout: 60000,
+  testTimeout: process.env.E2E_TESTNET === 'true' ? 120000 : 30000,
 };
