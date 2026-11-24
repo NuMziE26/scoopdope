@@ -61,6 +61,51 @@ jobs:
         run: cargo deny check
         working-directory: contracts
 
+  liquidity-pool-testnet-integration:
+    name: Contracts - Liquidity Pool Testnet Integration
+    runs-on: ubuntu-latest
+    # Only run when testnet credentials are configured so CI never fails
+    # for forks or PRs without secrets. Runs automatically on push to main.
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts
+
+      - name: Fund testnet accounts
+        env:
+          STELLAR_TESTNET_SECRET: ${{ secrets.STELLAR_TESTNET_SECRET }}
+        run: |
+          if [ -z "$STELLAR_TESTNET_SECRET" ]; then
+            echo "STELLAR_TESTNET_SECRET not set; skipping testnet funding."
+            exit 0
+          fi
+          ./scripts/fund-testnet.sh
+
+      - name: Run liquidity pool testnet integration tests
+        env:
+          STELLAR_TESTNET_SECRET: ${{ secrets.STELLAR_TESTNET_SECRET }}
+          STELLAR_TESTNET_RPC_URL: ${{ secrets.STELLAR_TESTNET_RPC_URL }}
+          STELLAR_TESTNET_HORIZON_URL: ${{ secrets.STELLAR_TESTNET_HORIZON_URL }}
+        run: |
+          if [ -z "$STELLAR_TESTNET_SECRET" ]; then
+            echo "STELLAR_TESTNET_SECRET not set; skipping testnet integration tests."
+            exit 0
+          fi
+          cargo test --test liquidity_pool_testnet -- --nocapture
+        working-directory: contracts
+
   contracts-build-wasm:
     name: Contracts - Build WASM
     runs-on: ubuntu-latest

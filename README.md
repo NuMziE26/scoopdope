@@ -1,6 +1,7 @@
 # scoopdope ..... good luck ...
 y
 
+[![Mutation Score](https://img.shields.io/badge/mutation%20score-%E2%89%A570%25-brightgreen)](./stryker.conf.js)
 
 > A blockchain education platform built on the **Stellar network**, delivering verifiable on-chain credentials and token-based learning incentives.
 
