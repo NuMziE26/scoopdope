@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Query, Redirect, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Redirect, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
@@ -37,6 +37,15 @@ class RegisterDto {
       'password must contain at least one uppercase letter, one lowercase letter, and one number',
   })
   password: string;
+
+  @ApiProperty({
+    example: 'REF-ABC123',
+    description: 'Optional referral code from the user who invited this learner',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }
 
 class LoginDto {
@@ -89,20 +98,14 @@ class RefreshDto {
   @IsString() refresh_token: string;
 }
 
-class UpdateWalletDto {
+class PublicKeyDto {
   @ApiProperty({
-    example: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+    example: '-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----',
     description:
-      'Stellar public key (56-character G... address) to link, or null to disconnect the wallet',
-    nullable: true,
-    required: false,
+      'The user\'s public key (e.g. PEM-encoded). Only public key material is accepted; private keys are never stored server-side.',
   })
-  @IsOptional()
   @IsString()
-  @Matches(/^G[A-Z2-7]{55}$/, {
-    message: 'publicKey must be a valid Stellar public key (56 characters starting with G)',
-  })
-  publicKey?: string | null;
+  publicKey: string;
 }
 
 @ApiTags('auth')
@@ -243,7 +246,7 @@ export class AuthController {
   @ApiResponse({ status: 429, description: 'Too many requests — rate limit exceeded' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   register(@Body() dto: RegisterDto, @Query('ref') ref?: string) {
-    return this.authService.register(dto.email, dto.password, ref);
+    return this.authService.register(dto.email, dto.password, dto.referralCode ?? ref);
   }
 
   @Post('login')
@@ -324,20 +327,69 @@ export class AuthController {
     return this.authService.resetPassword(dto.token, dto.newPassword);
   }
 
-  @Patch('users/me/wallet')
+  @Post('public-key')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Connect or disconnect the current user Stellar wallet',
+    summary: 'Register the current user\'s E2E public key',
     description:
-      'Stores the provided Stellar public key on the authenticated user, or clears it when publicKey is null. Returns the updated user profile.',
+      'Stores the public half of the user\'s E2E encryption key pair. The server never receives or stores private keys.',
   })
-  @ApiBody({ type: UpdateWalletDto })
-  @ApiResponse({ status: 200, description: 'Wallet updated — returns the updated user profile' })
-  @ApiResponse({ status: 400, description: 'Invalid Stellar public key format' })
+  @ApiBody({ type: PublicKeyDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Public key registered — returns the stored public key and its version',
+    schema: {
+      example: { publicKey: '-----BEGIN PUBLIC KEY-----...', keyVersion: 1 },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation error — invalid public key' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateWallet(@Req() req: { user: { id: string } }, @Body() dto: UpdateWalletDto) {
-    return this.authService.updateWallet(req.user.id, dto.publicKey ?? null);
+  setPublicKey(@Req() req: { user: { id: string } }, @Body() dto: PublicKeyDto) {
+    return this.authService.setPublicKey(req.user.id, dto.publicKey);
+  }
+
+  @Put('public-key')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Rotate the current user\'s E2E public key',
+    description:
+      'Replaces the stored public key and increments its version. Messages encrypted to the previous key become undecryptable.',
+  })
+  @ApiBody({ type: PublicKeyDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Public key rotated — returns the new public key and version',
+    schema: {
+      example: { publicKey: '-----BEGIN PUBLIC KEY-----...', keyVersion: 2 },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Validation error — invalid public key' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  rotatePublicKey(@Req() req: { user: { id: string } }, @Body() dto: PublicKeyDto) {
+    return this.authService.rotatePublicKey(req.user.id, dto.publicKey);
+  }
+
+  @Get('public-key/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Fetch a recipient\'s E2E public key',
+    description:
+      'Returns only the public key and its version so the client can encrypt messages to the recipient. Private keys are never returned.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the recipient\'s public key and version',
+    schema: {
+      example: { userId: 'uuid-here', publicKey: '-----BEGIN PUBLIC KEY-----...', keyVersion: 1 },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User or public key not found' })
+  getPublicKey(@Param('id') id: string) {
+    return this.authService.getPublicKey(id);
   }
 
   @Post('deactivate')
