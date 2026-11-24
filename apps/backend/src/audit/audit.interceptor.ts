@@ -1,12 +1,17 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from './audit.service';
 import { AuditAction } from './audit-log.entity';
+import { AUDIT_LOG_METADATA } from './audit-log.decorator';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-  constructor(private auditService: AuditService) {}
+  constructor(
+    private auditService: AuditService,
+    private reflector: Reflector,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
@@ -18,7 +23,57 @@ export class AuditInterceptor implements NestInterceptor {
       this.auditService.log(AuditAction.API_KEY_USED, user.userId, true, { apiKeyId: user.apiKeyId }, ip, ua);
     }
 
-    return next.handle();
+    const actionName = this.reflector.getAllAndOverride<string | undefined>(AUDIT_LOG_METADATA, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!actionName) {
+      return next.handle();
+    }
+
+    const ip = this.extractClientIp(req);
+    const ua = req.headers?.['user-agent'];
+    const actorId = user?.id ?? user?.userId;
+    const target = this.extractTarget(req);
+
+    return next.handle().pipe(
+      tap({
+        next: () => {
+          this.auditService.log(actionName, actorId, true, target, ip, ua);
+        },
+        error: () => {
+          this.auditService.log(actionName, actorId, false, target, ip, ua);
+        },
+      }),
+    );
+  }
+
+  /**
+   * Build the audit target from the route params (e.g. :id) and, when present,
+   * the request body. Route params take precedence for the primary target id.
+   */
+  private extractTarget(req: any): Record<string, any> {
+    const target: Record<string, any> = {};
+
+    const params = req?.params;
+    if (params && typeof params === 'object') {
+      if (params.id !== undefined) {
+        target.id = params.id;
+      }
+      for (const [key, value] of Object.entries(params)) {
+        if (key !== 'id') {
+          target[key] = value;
+        }
+      }
+    }
+
+    const body = req?.body;
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      target.body = body;
+    }
+
+    return target;
   }
 
   /**

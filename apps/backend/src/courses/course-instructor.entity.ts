@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
   Unique,
+  Check,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Course } from './course.entity';
@@ -16,6 +17,8 @@ import { Course } from './course.entity';
  */
 @Entity('course_instructors')
 @Unique(['courseId', 'instructorId'])
+// Why: revenue share is a percentage and must stay within 0-100.
+@Check('"revenue_share_percent" >= 0 AND "revenue_share_percent" <= 100')
 export class CourseInstructor {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -35,6 +38,11 @@ export class CourseInstructor {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'instructorId' })
   instructor: User;
+
+  // Why: per-assignment revenue share (0-100) so splits can be renegotiated
+  // per instructor/course without a code change. Defaults to 70%.
+  @Column({ name: 'revenue_share_percent', type: 'int', default: 70 })
+  revenueSharePercent: number;
 
   @CreateDateColumn()
   assignedAt: Date;
