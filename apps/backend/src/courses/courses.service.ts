@@ -87,7 +87,6 @@ export class CoursesService {
     const { search, level, category, language, page = 1, limit = 20 } = query;
 
     // Cache key encodes all filter params; skip cache for search queries
-    const tagsKey = tags?.length ? tags.sort().join(',') : '';
     const cacheKey = !search
       ? `courses:catalog:${level ?? ''}:${category ?? ''}:${language ?? ''}:${page}:${limit}`
       : null;
@@ -119,6 +118,88 @@ export class CoursesService {
       qb.andWhere('course.language = :language', { language });
     }
 
+    if (level) {
+      qb.andWhere('course.level = :level', { level });
+    }
+
+    if (category) {
+      qb.andWhere('course.category = :category', { category });
+    }
+
+    qb.orderBy('course.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [items, total] = await qb.getManyAndCount();
+    const result = { items, total, page, limit };
+
+    if (cacheKey) {
+      await this.cacheManager.set(cacheKey, result, this.CACHE_TTL).catch(() => {});
+    }
+
+    return result;
+  }
+
+  /**
+   * Create a language variant of an existing course. The variant clones the
+   * source course's metadata, is assigned the given ISO 639-1 language code,
+   * shares the source's variantGroupId (so all language variants are linked),
+   * and is saved as a draft awaiting translation and review.
+   */
+  async createVariant(courseId: string, language: string, user: { id: string }): Promise<Course> {
+    const source = await this.repo.findOne({ where: { id: courseId } });
+    if (!source) {
+      throw new NotFoundException(`Course with id ${courseId} not found`);
+    }
+
+    if (source.instructorId && user?.id && source.instructorId !== user.id) {
+      throw new ForbiddenException('You can only create variants of your own courses');
+    }
+
+    const normalizedLanguage = (language ?? '').trim().toLowerCase();
+    if (!/^[a-z]{2}$/.test(normalizedLanguage)) {
+      throw new BadRequestException('language must be a valid ISO 639-1 code');
+    }
+
+    if (source.language === normalizedLanguage) {
+      throw new BadRequestException('Course already exists in this language');
+    }
+
+    const variantGroupId = source.variantGroupId ?? source.id;
+
+    const existingVariant = await this.repo.findOne({
+      where: { variantGroupId, language: normalizedLanguage },
+    });
+    if (existingVariant) {
+      throw new BadRequestException('A variant for this language already exists');
+    }
+
+    const variant = this.repo.create({
+      title: source.title,
+      description: source.description,
+      level: source.level,
+      category: source.category,
+      price: source.price,
+      language: normalizedLanguage,
+      variantGroupId,
+      instructorId: source.instructorId,
+      status: CourseStatus.DRAFT,
+      isDeleted: false,
+    });
+
+    const saved = await this.repo.save(variant);
+
+    // Ensure the source course is linked into the same variant group.
+    if (!source.variantGroupId) {
+      source.variantGroupId = variantGroupId;
+      await this.repo.save(source);
+    }
+
+    await this.invalidateCache();
+    return saved;
+  }
+
+  private parseCsvRows(file: { buffer: Buffer }): string[][] {
     const rows = this.parseCsv(file.buffer.toString('utf-8'));
     if (rows.length === 0) {
       throw new BadRequestException('CSV file contains no data rows');

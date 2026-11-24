@@ -59,6 +59,22 @@ export class InstructorAnalyticsController {
   }
 
   /**
+   * Get the authenticated instructor's current revenue share percentage.
+   * GET /v1/instructor/revenue-share
+   */
+  @Get('instructor/revenue-share')
+  @UseGuards(RolesGuard)
+  @Roles('instructor', 'admin')
+  @ApiOperation({ summary: "Get instructor's revenue share percentage" })
+  @ApiResponse({ status: 200, description: 'Revenue share returned' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden — instructor or admin only' })
+  getRevenueShare(@Request() req: any) {
+    const instructorId = req.user.id ?? req.user.sub;
+    return this.instructorAnalyticsService.getRevenueShare(instructorId);
+  }
+
+  /**
    * Get detailed analytics for a specific course (instructor or admin).
    * GET /v1/courses/:id/instructor-analytics
    */

@@ -6,6 +6,7 @@ import { Cache } from 'cache-manager';
 import { Enrollment } from '../enrollments/enrollment.entity';
 import { Progress } from '../progress/progress.entity';
 import { Lesson } from '../courses/lesson.entity';
+import { InstructorAssignmentService } from '../instructors/instructor-assignment.service';
 
 export interface DateRangeFilter {
   from?: Date;
@@ -61,6 +62,7 @@ export class InstructorAnalyticsService {
     @InjectRepository(Lesson)
     private lessonRepo: Repository<Lesson>,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    private instructorAssignmentService: InstructorAssignmentService,
   ) {}
 
   /**
@@ -133,6 +135,7 @@ export class InstructorAnalyticsService {
     totalEnrollments: number;
     totalCompletions: number;
     overallCompletionRate: number;
+    revenueSharePercent: number;
     courses: InstructorCourseAnalytics[];
   }> {
     const cacheKey = `${this.CACHE_PREFIX}instructor:${instructorId}:${filter.from?.toISOString() ?? ''}:${filter.to?.toISOString() ?? ''}`;
@@ -170,11 +173,15 @@ export class InstructorAnalyticsService {
         ? Math.round((totalCompletions / totalEnrollments) * 10000) / 100
         : 0;
 
+    const revenueSharePercent =
+      await this.instructorAssignmentService.getRevenueSharePercent(instructorId);
+
     const result = {
       totalStudents,
       totalEnrollments,
       totalCompletions,
       overallCompletionRate,
+      revenueSharePercent,
       courses,
     };
 

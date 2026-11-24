@@ -89,7 +89,8 @@ export class CoursesController {
     name: 'language',
     required: false,
     enum: ['en', 'fr', 'ar', 'es'],
-    description: 'Filter by ISO 639-1 language code (en, fr, ar, es)',
+    description:
+      'Filter by ISO 639-1 language code (en, fr, ar, es). Returns only courses whose content is in the requested language.',
   })
   @ApiQuery({
     name: 'categoryId',
@@ -354,6 +355,52 @@ export class CoursesController {
     }
 
     return { created: created.length, failed: errors.length, errors };
+  }
+
+  @Post(':id/variants')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'instructor')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create a linked language variant of an existing course',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        language: 'es',
+        title: 'Introducción a Stellar',
+        description: 'Aprende los fundamentos de Stellar',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Language variant created and linked to the source course',
+    schema: { example: { id: 'uuid', language: 'es', variantOfId: 'uuid' } },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or unsupported language' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'Source course not found' })
+  @ApiResponse({ status: 409, description: 'A variant in this language already exists' })
+  async createVariant(
+    @Param('id') id: string,
+    @Body() data: any,
+    @Request() req: { user?: { id: string; role: string } },
+  ) {
+    const language = this.normalizeLanguage(data?.language);
+    if (!language) {
+      throw new BadRequestException('language is required');
+    }
+    const course = await this.coursesService.createVariant(id, { ...data, language }, req.user);
+    await this.auditService.log({
+      userId: req.user?.id,
+      action: AuditAction.COURSE_CREATE,
+      entityType: 'course',
+      entityId: course?.id,
+      metadata: { title: course?.title, language, variantOfId: id },
+    });
+    return course;
   }
 
   @Patch(':id/publish')

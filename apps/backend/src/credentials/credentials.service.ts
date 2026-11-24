@@ -204,4 +204,27 @@ export class CredentialsService {
       message: isExpired ? 'Credential has expired' : 'Credential verified successfully',
     };
   }
+
+  async verifyByHash(hash: string) {
+    const credential = await this.repo.findOne({
+      where: [{ txHash: hash }, { onChainId: hash }],
+      relations: ['user', 'course'],
+    });
+
+    if (!credential) {
+      throw new NotFoundException('Credential not found');
+    }
+
+    const isExpired = credential.expiresAt ? new Date(credential.expiresAt) < new Date() : false;
+    const onChainStatus = isExpired ? 'expired' : 'verified';
+
+    return {
+      learnerName: credential.user?.username ?? '',
+      courseName: credential.course?.title ?? '',
+      issuedAt: credential.issuedAt,
+      onChainStatus,
+      txHash: credential.txHash,
+      stellarPublicKey: credential.stellarPublicKey,
+    };
+  }
 }

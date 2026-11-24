@@ -30,6 +30,12 @@ export class CoursesRepository {
     return this.repository.findOne({ where: { id } });
   }
 
+  async findVariants(variantGroupId: string): Promise<Course[]> {
+    return this.repository.find({
+      where: { variantGroupId, published: true },
+    });
+  }
+
   async create(course: Partial<Course>): Promise<Course> {
     const entity = this.repository.create(course);
     return this.repository.save(entity);

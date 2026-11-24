@@ -21,6 +21,8 @@ export interface CourseSummary {
   description: string;
   level: CourseLevel;
   language: CourseLanguage;
+  /** Links language variants of the same course together */
+  variantGroupId?: string;
   durationHours: number;
   status: CourseStatus;
   instructorId: string | null;
@@ -51,6 +53,7 @@ export interface UpdateCourseDto {
   title?: string;
   description?: string;
   level?: CourseLevel;
+  language?: CourseLanguage;
   durationHours?: number;
   isPublished?: boolean;
 }

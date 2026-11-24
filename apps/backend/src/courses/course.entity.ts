@@ -6,6 +6,7 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { CourseModule } from './course-module.entity';
 import { User } from '../users/user.entity';
@@ -29,6 +30,8 @@ export enum CourseDifficulty {
 }
 
 @Entity('courses')
+@Index('IDX_courses_language', ['language'])
+@Index('IDX_courses_variant_group_id', ['variantGroupId'])
 export class Course {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -39,9 +42,6 @@ export class Course {
   @Column('text')
   description: string;
 
-  @Column({ nullable: true })
-  category: string;
-
   /** @deprecated use difficultyLevel instead */
   @Column({ default: 'beginner' })
   level: string;
@@ -49,6 +49,14 @@ export class Course {
   /** ISO 639-1 language code of the course content: "en", "fr", "ar", "es" */
   @Column({ type: 'varchar', length: 2, default: 'en' })
   language: string;
+
+  /**
+   * Groups language variants of the same course together.
+   * All variants (e.g. English and Spanish) share the same variantGroupId.
+   * Null for courses that have no language variants.
+   */
+  @Column({ nullable: true, type: 'uuid' })
+  variantGroupId: string | null;
 
   @Column({ default: 0 })
   durationHours: number;
@@ -95,10 +103,6 @@ export class Course {
    */
   @Column({ nullable: true, type: 'int' })
   maxEnrollment: number | null;
-
-  /** Category for course classification */
-  @Column({ nullable: true })
-  category: string;
 
   /** Array of learning outcomes for the course */
   @Column({ type: 'jsonb', nullable: true })

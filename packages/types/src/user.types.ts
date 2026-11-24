@@ -23,6 +23,18 @@ export interface UserProfile {
   referralCode: string | null;
   createdAt: string;
   themePreference: 'light' | 'dark' | 'system';
+  /** Percentage of course revenue paid to the instructor (0–100). Only set for instructors. */
+  revenueSharePercent?: number;
+}
+
+/**
+ * Public-facing instructor profile data.
+ * Extends the base user profile with instructor-specific fields.
+ */
+export interface InstructorProfile extends UserProfile {
+  role: 'instructor';
+  /** Percentage of course revenue paid to the instructor (0–100) */
+  revenueSharePercent: number;
 }
 
 /**

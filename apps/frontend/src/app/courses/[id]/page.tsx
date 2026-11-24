@@ -26,6 +26,14 @@ interface CourseData {
   maxEnrollment: number | null;
   enrollmentCount?: number;
   isPublished: boolean;
+  language?: string;
+  variantGroupId?: string | null;
+}
+
+interface CourseVariant {
+  id: string;
+  title: string;
+  language: string;
 }
 
 interface Lesson {
@@ -67,6 +75,7 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
   const [prereqStatus, setPrereqStatus] = useState<PrerequisiteStatus | null>(null);
   const [prereqLoading, setPrereqLoading] = useState(true);
   const [moduleProgress, setModuleProgress] = useState<ModuleProgressMap>({});
+  const [variants, setVariants] = useState<CourseVariant[]>([]);
   const { user } = useAuth();
   const { clear: clearCompare } = useCompareStore();
 
@@ -82,6 +91,16 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
         setCourse(data);
       } catch {
         // course data unavailable
+      }
+    }
+
+    async function fetchVariants() {
+      try {
+        const { data } = await api.get(`/courses/${courseId}/variants`);
+        const list: CourseVariant[] = Array.isArray(data) ? data : (data?.data ?? []);
+        setVariants(list);
+      } catch {
+        // variants unavailable — no language picker
       }
     }
 
@@ -166,6 +185,7 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
     }
 
     fetchCourse();
+    fetchVariants();
     fetchEnrollmentStatus();
     fetchModules();
     fetchPrerequisites();
@@ -262,6 +282,31 @@ export default function CourseDetailPage({ params }: CourseDetailPageProps) {
           </div>
         )}
       </div>
+
+      {variants.length > 1 && (
+        <div className="flex items-center gap-2 mb-3" aria-label="Course language variants">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Language:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {variants.map((v) => {
+              const isCurrent = v.id === courseId;
+              return (
+                <Link
+                  key={v.id}
+                  href={`/courses/${v.id}`}
+                  aria-current={isCurrent ? 'page' : undefined}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium uppercase transition-colors ${
+                    isCurrent
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {v.language}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {course?.description && (
         <p className="text-gray-600 dark:text-gray-400 mb-2">{course.description}</p>

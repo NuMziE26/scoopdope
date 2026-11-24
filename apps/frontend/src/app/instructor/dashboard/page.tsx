@@ -51,6 +51,10 @@ interface EnrichedCourse {
   rating: number;
 }
 
+interface InstructorRevenueShare {
+  revenueSharePercent: number;
+}
+
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
 function StatCard({
@@ -118,6 +122,8 @@ export default function InstructorDashboardPage() {
   const [studentProgress, setStudentProgress] = useState<StudentProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [revenueSharePercent, setRevenueSharePercent] = useState<number | null>(null);
+  const [revenueShareError, setRevenueShareError] = useState(false);
 
   // ── Role guard ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -143,6 +149,25 @@ export default function InstructorDashboardPage() {
 
     async function load() {
       setIsLoading(true);
+      setRevenueShareError(false);
+
+      // Fetch the instructor's revenue share — gracefully degraded if unavailable
+      try {
+        const revenueRes = await api.get<InstructorRevenueShare>(
+          `/v1/instructors/${state.user!.id}/revenue-share`,
+        );
+        const pct = revenueRes.data?.revenueSharePercent;
+        if (typeof pct === 'number' && Number.isFinite(pct)) {
+          setRevenueSharePercent(pct);
+        } else {
+          setRevenueSharePercent(null);
+          setRevenueShareError(true);
+        }
+      } catch {
+        setRevenueSharePercent(null);
+        setRevenueShareError(true);
+      }
+
       try {
         // Fetch courses assigned to this instructor
         const assignmentsRes = await api.get<CourseAssignment[]>(
@@ -273,7 +298,7 @@ export default function InstructorDashboardPage() {
         <h2 id="stats-heading" className="sr-only">
           Summary Statistics
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <StatCard label="Courses" value={isLoading ? '…' : courses.length} />
           <StatCard
             label="Total Enrollments"
@@ -288,6 +313,23 @@ export default function InstructorDashboardPage() {
             label="Active Learners"
             value={isLoading ? '…' : studentProgress.length.toLocaleString()}
             sub="with recorded progress"
+          />
+          <StatCard
+            label="Revenue Share"
+            value={
+              isLoading
+                ? '…'
+                : revenueSharePercent !== null
+                  ? `${revenueSharePercent}%`
+                  : '—'
+            }
+            sub={
+              revenueShareError
+                ? 'unable to load'
+                : revenueSharePercent !== null
+                  ? 'of each course payment'
+                  : undefined
+            }
           />
         </div>
       </section>

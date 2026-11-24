@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Redirect, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query, Redirect, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
@@ -87,6 +87,22 @@ class ResetPasswordDto {
 class RefreshDto {
   @ApiProperty({ example: 'refresh-token-here' })
   @IsString() refresh_token: string;
+}
+
+class UpdateWalletDto {
+  @ApiProperty({
+    example: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+    description:
+      'Stellar public key (56-character G... address) to link, or null to disconnect the wallet',
+    nullable: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^G[A-Z2-7]{55}$/, {
+    message: 'publicKey must be a valid Stellar public key (56 characters starting with G)',
+  })
+  publicKey?: string | null;
 }
 
 @ApiTags('auth')
@@ -306,6 +322,22 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired token' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Patch('users/me/wallet')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Connect or disconnect the current user Stellar wallet',
+    description:
+      'Stores the provided Stellar public key on the authenticated user, or clears it when publicKey is null. Returns the updated user profile.',
+  })
+  @ApiBody({ type: UpdateWalletDto })
+  @ApiResponse({ status: 200, description: 'Wallet updated — returns the updated user profile' })
+  @ApiResponse({ status: 400, description: 'Invalid Stellar public key format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  updateWallet(@Req() req: { user: { id: string } }, @Body() dto: UpdateWalletDto) {
+    return this.authService.updateWallet(req.user.id, dto.publicKey ?? null);
   }
 
   @Post('deactivate')

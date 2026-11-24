@@ -18,6 +18,11 @@ export const openApiSpec = {
     { name: 'Lessons', description: 'Lesson management endpoints' },
     { name: 'Forums', description: 'Forum thread endpoints' },
     { name: 'Payments', description: 'Payment and invoice endpoints' },
+    { name: 'Courses', description: 'Course catalogue endpoints' },
+    {
+      name: 'Credentials',
+      description: 'Public on-chain credential verification endpoints',
+    },
   ],
   paths: {
     '/forums/threads': {
@@ -54,6 +59,75 @@ export const openApiSpec = {
             },
           },
           '400': { description: 'Invalid cursor or limit' },
+        },
+      },
+    },
+    '/courses': {
+      get: {
+        tags: ['Courses'],
+        summary: 'List courses',
+        description:
+          'Returns courses, optionally filtered by language. Use the `language` query parameter to restrict results to courses published in a specific language.',
+        operationId: 'listCourses',
+        parameters: [
+          {
+            name: 'language',
+            in: 'query',
+            required: false,
+            description:
+              'ISO 639-1 two-letter language code (e.g. `en`, `es`). When provided, only courses whose `language` matches are returned.',
+            schema: {
+              type: 'string',
+              pattern: '^[a-z]{2}$',
+              example: 'es',
+            },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'A list of courses',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Course' },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid language code' },
+        },
+      },
+    },
+    '/credentials/verify/{hash}': {
+      get: {
+        tags: ['Credentials'],
+        summary: 'Verify an on-chain credential by hash',
+        description:
+          'Public endpoint (no authentication required). Returns the credential details and its on-chain verification status for the given credential hash.',
+        operationId: 'verifyCredential',
+        security: [],
+        parameters: [
+          {
+            name: 'hash',
+            in: 'path',
+            required: true,
+            description: 'The credential hash to verify.',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'The credential and its verification status',
+            content: {
+              'application/json': {
+                schema: {
+                  $ref: '#/components/schemas/CredentialVerification',
+                },
+              },
+            },
+          },
+          '404': { description: 'Credential not found' },
         },
       },
     },
@@ -158,6 +232,60 @@ export const openApiSpec = {
   },
   components: {
     schemas: {
+      Course: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          description: { type: 'string' },
+          language: {
+            type: 'string',
+            description: 'ISO 639-1 two-letter language code.',
+            example: 'en',
+          },
+          variantGroupId: {
+            type: 'string',
+            nullable: true,
+            description:
+              'Identifier linking language variants of the same course.',
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: ['id', 'title', 'language'],
+      },
+      CredentialVerification: {
+        type: 'object',
+        properties: {
+          credentialHash: { type: 'string' },
+          learnerName: { type: 'string' },
+          courseName: { type: 'string' },
+          issueDate: { type: 'string', format: 'date-time' },
+          verified: {
+            type: 'boolean',
+            description:
+              'Whether the credential was confirmed on-chain (Stellar).',
+          },
+          transactionHash: {
+            type: 'string',
+            nullable: true,
+            description: 'The Stellar transaction hash, if verified.',
+          },
+          explorerUrl: {
+            type: 'string',
+            format: 'uri',
+            nullable: true,
+            description: 'Link to the transaction on Stellar Explorer.',
+          },
+        },
+        required: [
+          'credentialHash',
+          'learnerName',
+          'courseName',
+          'issueDate',
+          'verified',
+        ],
+      },
       Lesson: {
         type: 'object',
         properties: {
