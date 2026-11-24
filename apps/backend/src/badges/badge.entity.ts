@@ -1,7 +1,11 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { UserBadge } from './user-badge.entity';
 
-export type BadgeCriteriaType = 'courses_completed' | 'streak_days' | 'students_helped';
+export type BadgeCriteriaType =
+  | 'courses_completed'
+  | 'streak_days'
+  | 'students_helped'
+  | 'enrollments';
 
 export interface BadgeCriteria {
   type: BadgeCriteriaType;

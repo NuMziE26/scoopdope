@@ -149,6 +149,8 @@ scoopdope/
 
 ## Getting Started
 
+> **New to the project?** Start with the [Developer Onboarding Guide](./docs/developer-onboarding.md) — it covers prerequisites, local setup, environment variables, running services and tests, and common troubleshooting, with a quick-start sequence to get you from a clean machine to a running local stack.
+
 Follow these steps to run scoopdope locally.
 
 ### Prerequisites
@@ -373,11 +375,11 @@ Quick summary:
 <!-- handsoff-issue-1025 -->
 - #1025: No database indexes on foreign keys
 
-<!-- handsoff-issue-1326 -->
-- #1326: Implement Course Bundle Discount Pricing
+<!-- handsoff-issue-1334 -->
+- #1334: Implement Bookmarks and Learning Lists
 
-<!-- handsoff-issue-1327 -->
-- #1327: Add Coupon Code System
+<!-- handsoff-issue-1335 -->
+- #1335: Add Announcement System for Instructors
 
-<!-- handsoff-issue-1328 -->
-- #1328: Implement Waitlist Auto-Enrollment
+<!-- handsoff-issue-1336 -->
+- #1336: Implement User Deactivation and Reactivation

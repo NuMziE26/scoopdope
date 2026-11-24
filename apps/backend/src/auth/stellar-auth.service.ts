@@ -48,6 +48,15 @@ export class StellarAuthService {
     return { transaction, network_passphrase: this.networkPassphrase };
   }
 
+  /** PATCH /v1/users/me/wallet — persists (or clears) the connected wallet key */
+  async setStellarPublicKey(
+    userId: string,
+    publicKey: string | null
+  ): Promise<{ stellarPublicKey: string | null }> {
+    const user = await this.usersService.setStellarPublicKey(userId, publicKey);
+    return { stellarPublicKey: user.stellarPublicKey ?? null };
+  }
+
   /** POST /auth/stellar — verifies signed challenge, returns JWT */
   async verifyChallenge(signedXdr: string): Promise<{ access_token: string }> {
     let clientPublicKey: string;

@@ -19,14 +19,22 @@ export function middleware(request: NextRequest) {
 
   const middlewareRequest = new NextRequest(request, { headers: requestHeaders });
   const pathname = request.nextUrl.pathname;
+  // Authenticated app routes (e.g. /account/support, /dashboard) must go through
+  // i18n routing so locale prefixes and CSP nonces are applied consistently.
+  const isAuthenticatedRoute = /^\/(?:account|dashboard)(?:\/|$)/.test(pathname);
   const isPageRequest =
     !/^\/(?:api|_next|_vercel)(?:\/|$)/.test(pathname) && !pathname.includes('.');
-  const response = isPageRequest
-    ? handleI18nRouting(middlewareRequest)
-    : NextResponse.next({ request: { headers: requestHeaders } });
+  const response =
+    isPageRequest || isAuthenticatedRoute
+      ? handleI18nRouting(middlewareRequest)
+      : NextResponse.next({ request: { headers: requestHeaders } });
+
+  // Ensure the nonce is forwarded to the app via request headers so that
+  // `headers().get('x-nonce')` works in server components, even when the
+  // i18n middleware produced the response.
+  response.headers.set('x-nonce', nonce);
 
   response.headers.set('Content-Security-Policy', cspHeader);
-  response.headers.set('Content-Security-Policy-Report-Only', cspHeader);
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
@@ -48,7 +56,11 @@ export const config = {
      * - favicon.ico (favicon file)
      *
      * API routes are now included to ensure CSP headers are applied
+     * Authenticated routes (/account/*, /dashboard/*) are matched so that
+     * CSP headers and i18n routing apply to the support and streak pages.
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/account/:path*',
+    '/dashboard/:path*',
   ],
 };

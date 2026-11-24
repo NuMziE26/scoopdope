@@ -1,4 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, Between, FindOptionsWhere, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { AuditLog } from './entities/audit-log.entity';
 
 export type AuditAction = 'create' | 'update' | 'delete';
 
@@ -13,48 +16,159 @@ export interface AuditEntry {
   metadata?: Record<string, unknown>;
 }
 
+export interface LogOptions {
+  resourceType?: string;
+  resourceId?: string;
+  changes?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface AuditLogFilters {
+  userId?: string;
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  startDate?: Date | string;
+  endDate?: Date | string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedAuditLogs {
+  data: AuditLog[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
-  private readonly entries: AuditEntry[] = [];
 
-  record(
-    actor: string,
-    action: AuditAction,
-    resource: string,
-    resourceId: string,
-    ipAddress?: string,
-    metadata?: Record<string, unknown>,
-  ): AuditEntry {
-    const entry: AuditEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      actor,
+  constructor(
+    @InjectRepository(AuditLog)
+    private readonly auditLogRepository: Repository<AuditLog>,
+  ) {}
+
+  async log(
+    action: string,
+    userId: string,
+    success: boolean,
+    options: LogOptions = {},
+  ): Promise<AuditLog> {
+    const entry = this.auditLogRepository.create({
+      actor: userId,
       action,
-      resource,
-      resourceId,
-      timestamp: new Date().toISOString(),
-      ipAddress,
-      metadata,
-    };
+      success,
+      resourceType: options.resourceType,
+      resourceId: options.resourceId,
+      changes: options.changes,
+      metadata: options.metadata,
+      ipAddress: options.ipAddress,
+      userAgent: options.userAgent,
+      timestamp: new Date(),
+    });
 
-    this.entries.push(entry);
+    const saved = await this.auditLogRepository.save(entry);
+
     this.logger.log(
-      `audit: ${entry.actor} ${entry.action} ${entry.resource}#${entry.resourceId}` +
-        (entry.ipAddress ? ` from ${entry.ipAddress}` : ''),
+      `audit: ${saved.actor} ${saved.action}` +
+        (saved.resourceType ? ` ${saved.resourceType}` : '') +
+        (saved.resourceId ? `#${saved.resourceId}` : '') +
+        (saved.ipAddress ? ` from ${saved.ipAddress}` : '') +
+        (success ? '' : ' (failed)'),
     );
 
-    return entry;
+    return saved;
   }
 
-  findAll(): AuditEntry[] {
-    return [...this.entries];
+  async getLogs(filters: AuditLogFilters = {}): Promise<PaginatedAuditLogs> {
+    const page = Math.max(1, filters.page ?? 1);
+    const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
+
+    const where: FindOptionsWhere<AuditLog> = {};
+
+    if (filters.userId) {
+      where.actor = filters.userId;
+    }
+    if (filters.action) {
+      where.action = filters.action;
+    }
+    if (filters.resourceType) {
+      where.resourceType = filters.resourceType;
+    }
+    if (filters.resourceId) {
+      where.resourceId = filters.resourceId;
+    }
+
+    const startDate = filters.startDate ? new Date(filters.startDate) : undefined;
+    const endDate = filters.endDate ? new Date(filters.endDate) : undefined;
+
+    if (startDate && endDate) {
+      where.timestamp = Between(startDate, endDate);
+    } else if (startDate) {
+      where.timestamp = MoreThanOrEqual(startDate);
+    } else if (endDate) {
+      where.timestamp = LessThanOrEqual(endDate);
+    }
+
+    const [data, total] = await this.auditLogRepository.findAndCount({
+      where,
+      order: { timestamp: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
-  findByResource(resource: string, resourceId?: string): AuditEntry[] {
-    return this.entries.filter(
-      (entry) =>
-        entry.resource === resource &&
-        (resourceId === undefined || entry.resourceId === resourceId),
-    );
+  async getLogsForUser(userId: string): Promise<AuditLog[]> {
+    return this.auditLogRepository.find({
+      where: { actor: userId },
+      order: { timestamp: 'DESC' },
+    });
+  }
+
+  findByUser(userId: string): AuditEntry[] {
+    return this.entries.filter((entry) => entry.actor === userId);
+  }
+
+  findByUserAndDateRange(
+    userId: string,
+    from?: Date,
+    to?: Date,
+  ): AuditEntry[] {
+    const fromTime = from ? from.getTime() : undefined;
+    const toTime = to ? to.getTime() : undefined;
+
+    return this.entries.filter((entry) => {
+      if (entry.actor !== userId) {
+        return false;
+      }
+
+      const entryTime = new Date(entry.timestamp).getTime();
+      if (Number.isNaN(entryTime)) {
+        return false;
+      }
+
+      if (fromTime !== undefined && entryTime < fromTime) {
+        return false;
+      }
+
+      if (toTime !== undefined && entryTime > toTime) {
+        return false;
+      }
+
+      return true;
+    });
   }
 }
