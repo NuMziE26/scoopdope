@@ -32,4 +32,10 @@ export class UserBadge {
 
   @CreateDateColumn()
   earnedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  mintedAt: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  mintTransactionHash: string | null;
 }

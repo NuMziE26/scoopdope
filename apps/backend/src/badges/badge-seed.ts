@@ -11,6 +11,10 @@ export interface BadgeSeed {
 }
 
 export const BADGE_SEEDS: BadgeSeed[] = [
+  { slug: 'first_enrollment', name: 'First Enrollment', description: 'Enroll in your first course', icon: 'user-plus', tier: 'bronze', type: 'enrollments', threshold: 1 },
+  { slug: 'first_completion', name: 'First Completion', description: 'Complete your first course', icon: 'graduation-cap', tier: 'bronze', type: 'courses_completed', threshold: 1 },
+  { slug: 'streak_7', name: 'Seven Day Streak', description: 'Maintain a 7-day learning streak', icon: 'flame', tier: 'bronze', type: 'streak_days', threshold: 7 },
+  { slug: 'courses_10', name: 'Course Master', description: 'Complete 10 courses', icon: 'trophy', tier: 'gold', type: 'courses_completed', threshold: 10 },
   { slug: 'first-course-bronze', name: 'First Course', description: 'Complete your first course', icon: 'graduation-cap', tier: 'bronze', type: 'courses_completed', threshold: 1 },
   { slug: 'course-collector-silver', name: 'Course Collector', description: 'Complete 5 courses', icon: 'books', tier: 'silver', type: 'courses_completed', threshold: 5 },
   { slug: 'course-master-gold', name: 'Course Master', description: 'Complete 10 courses', icon: 'trophy', tier: 'gold', type: 'courses_completed', threshold: 10 },

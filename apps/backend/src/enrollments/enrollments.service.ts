@@ -174,6 +174,14 @@ export class EnrollmentsService {
       enrolledAt: enrollment.enrolledAt,
     });
 
+    // Notify badge listeners that the learner's course count may have changed.
+    // The payload includes `userId` so badge criteria can be evaluated.
+    this.eventEmitter.emit('course-count-changed', {
+      userId,
+      courseId,
+      enrolledAt: enrollment.enrolledAt,
+    });
+
     // Emit the richer on-chain confirmed event for analytics and downstream modules.
     this.eventEmitter.emit(
       'enrollment.confirmed',
@@ -337,6 +345,36 @@ export class EnrollmentsService {
 
     // Notify waitlist system that a spot has opened
     this.eventEmitter.emit('enrollment.removed', { userId, courseId });
+
+    // The learner's course count changed; let badge listeners re-evaluate.
+    this.eventEmitter.emit('course-count-changed', { userId, courseId });
+  }
+
+  /**
+   * Mark an enrollment as completed and emit the events badge listeners need.
+   *
+   * Emits `course-count-changed` with the learner's `userId` so the badge
+   * listener can evaluate completion-based criteria (e.g. `first_completion`,
+   * `courses_10`).
+   */
+  async complete(userId: string, courseId: string): Promise<Enrollment> {
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: { userId, courseId },
+    });
+    if (!enrollment) throw new NotFoundException('Enrollment not found');
+
+    if (!enrollment.completedAt) {
+      enrollment.completedAt = new Date();
+      await this.enrollmentRepository.save(enrollment);
+    }
+
+    this.eventEmitter.emit('course-count-changed', {
+      userId,
+      courseId,
+      completedAt: enrollment.completedAt,
+    });
+
+    return enrollment;
   }
 
   async findByUser(userId: string): Promise<EnrollmentResponse[]> {
