@@ -8,6 +8,8 @@ import { User } from '../users/user.entity';
 import { Progress } from '../progress/progress.entity';
 import { Reply } from '../forums/reply.entity';
 import { Post } from '../forums/post.entity';
+import { Enrollment } from '../enrollments/enrollment.entity';
+import { StellarService } from '../stellar/stellar.service';
 import { BADGE_SEEDS } from './badge-seed';
 
 export interface BadgeProgress {
@@ -33,6 +35,8 @@ export class BadgesService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Progress) private readonly progressRepo: Repository<Progress>,
     @InjectRepository(Reply) private readonly replyRepo: Repository<Reply>,
+    @InjectRepository(Enrollment) private readonly enrollmentRepo: Repository<Enrollment>,
+    private readonly stellarService: StellarService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -76,6 +80,11 @@ export class BadgesService {
     });
   }
 
+  @OnEvent('enrollment.created')
+  async handleEnrollmentCreated(payload: { userId: string }): Promise<void> {
+    await this.evaluateAndAward(payload.userId);
+  }
+
   @OnEvent('course.completed')
   async handleCourseCompleted(payload: { userId: string }): Promise<void> {
     await this.evaluateAndAward(payload.userId);
@@ -100,10 +109,7 @@ export class BadgesService {
 
       for (const badge of badges) {
         if (progress[badge.criteria.type] < badge.criteria.threshold) continue;
-        const existing = await this.userBadgeRepo.findOne({ where: { userId, badgeId: badge.id } });
-        if (!existing) {
-          await this.userBadgeRepo.save(this.userBadgeRepo.create({ userId, badgeId: badge.id }));
-        }
+        await this.awardBadge(userId, badge);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -111,8 +117,36 @@ export class BadgesService {
     }
   }
 
+  /**
+   * Idempotently awards a badge to a learner and mints it on-chain.
+   * If the user already holds the badge, this is a no-op. If minting fails,
+   * the persisted row is left unminted so a retry job can re-attempt it.
+   */
+  async awardBadge(userId: string, badge: Badge): Promise<UserBadge | null> {
+    const existing = await this.userBadgeRepo.findOne({ where: { userId, badgeId: badge.id } });
+    if (existing) return existing;
+
+    const userBadge = await this.userBadgeRepo.save(
+      this.userBadgeRepo.create({ userId, badgeId: badge.id }),
+    );
+
+    try {
+      const txHash = await this.stellarService.mintBadge(userId, badge.slug);
+      userBadge.mintedAt = new Date();
+      userBadge.mintTxHash = txHash;
+      await this.userBadgeRepo.save(userBadge);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Badge mint failed for user=${userId} badge=${badge.slug}: ${message}. Row left unminted for retry.`,
+      );
+    }
+
+    return userBadge;
+  }
+
   private async getProgress(userId: string): Promise<Record<BadgeCriteriaType, number>> {
-    const [completedCourses, user, helpedStudents] = await Promise.all([
+    const [completedCourses, user, helpedStudents, enrollments] = await Promise.all([
       this.progressRepo.count({ where: { userId, completedAt: Not(IsNull()) } }),
       this.userRepo.findOne({ where: { id: userId } }),
       this.replyRepo
@@ -122,9 +156,11 @@ export class BadgesService {
         .where('reply.userId = :userId', { userId })
         .andWhere('post.userId != :userId', { userId })
         .getRawOne<{ count: string }>(),
+      this.enrollmentRepo.count({ where: { userId } }),
     ]);
 
     return {
+      first_enrollment: enrollments,
       courses_completed: completedCourses,
       streak_days: user?.longestStreak ?? 0,
       students_helped: Number(helpedStudents?.count ?? 0),
