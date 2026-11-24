@@ -1,9 +1,23 @@
 version: "3.8"
 
 services:
-  jaeger:
-    image: jaegertracing/all-in-one:1.57
-    container_name: handsoff-jaeger
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    environment:
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/monitoring/prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
     restart: unless-stopped
     environment:
       - COLLECTOR_OTLP_ENABLED=true

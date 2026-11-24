@@ -16,4 +16,10 @@ export class BadgesController {
   getMyBadges(@CurrentUser() user: { id: string }) {
     return this.badgesService.getMyBadges(user.id);
   }
+
+  @Get('me/earned')
+  @ApiOperation({ summary: 'Get earned badges for the current user (for learner profile display)' })
+  getMyEarnedBadges(@CurrentUser() user: { id: string }) {
+    return this.badgesService.getEarnedBadges(user.id);
+  }
 }

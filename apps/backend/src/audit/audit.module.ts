@@ -11,6 +11,6 @@ import { LoggerModule } from '../common/logger';
   imports: [TypeOrmModule.forFeature([AuditLog]), LoggerModule, ScheduleModule],
   providers: [AuditService, AuditInterceptor],
   controllers: [AuditController],
-  exports: [AuditService, AuditInterceptor],
+  exports: [AuditService, AuditInterceptor, TypeOrmModule],
 })
 export class AuditModule {}

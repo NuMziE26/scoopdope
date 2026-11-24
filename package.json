@@ -2,10 +2,10 @@
   "name": "handsoff",
   "version": "0.1.0",
   "private": true,
-  "description": "Handsoff monorepo",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "packages/types",
+    "apps/frontend",
+    "apps/backend"
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
