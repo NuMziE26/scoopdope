@@ -6,6 +6,35 @@
 /** Roles available in the platform */
 export type UserRole = 'student' | 'instructor' | 'admin';
 
+/** Slugs of the initial badge catalogue */
+export type BadgeSlug =
+  | 'first_enrollment'
+  | 'first_completion'
+  | 'streak_7'
+  | 'courses_10';
+
+/** Tier of a badge, used for visual styling */
+export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+/**
+ * A badge earned by a learner.
+ * Returned by the profile/badges API so the frontend can render it.
+ */
+export interface EarnedBadge {
+  /** Stable identifier of the badge, e.g. `first_completion` */
+  slug: BadgeSlug;
+  /** Human-readable badge name */
+  name: string;
+  /** Short description of the achievement */
+  description: string;
+  /** Icon identifier or URL used to render the badge */
+  icon: string;
+  /** Visual tier of the badge */
+  tier: BadgeTier;
+  /** ISO-8601 timestamp of when the badge was awarded */
+  earnedAt: string;
+}
+
 /**
  * Public-facing user profile data.
  * Safe to expose to the frontend — excludes sensitive fields like passwordHash.
@@ -23,6 +52,8 @@ export interface UserProfile {
   referralCode: string | null;
   createdAt: string;
   themePreference: 'light' | 'dark' | 'system';
+  /** Badges earned by the user (optional — may be omitted from some responses) */
+  badges?: EarnedBadge[];
 }
 
 /**

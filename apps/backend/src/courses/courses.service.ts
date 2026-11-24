@@ -14,6 +14,7 @@ import { Course, CourseStatus, DifficultyLevel } from './course.entity';
 import { CourseQueryDto } from './dto/course-query.dto';
 import { SearchService } from '../search/search.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 /** Ordered difficulty levels from easiest to hardest. */
 export const DIFFICULTY_ORDER: DifficultyLevel[] = [
@@ -62,8 +63,39 @@ export class CoursesService {
     @InjectRepository(Course) private repo: Repository<Course>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache = {} as Cache,
     private readonly searchService: SearchService = {} as SearchService,
-    private readonly metricsService: MetricsService = {} as MetricsService
+    private readonly metricsService: MetricsService = {} as MetricsService,
+    private readonly eventEmitter: EventEmitter2 = {} as EventEmitter2
   ) {}
+
+  /**
+   * Record that a learner has completed a course. Emits the events consumed by
+   * the badges listener so milestone badges (e.g. `first_completion`,
+   * `courses_10`) can be awarded.
+   */
+  async completeCourse(userId: string, courseId: string): Promise<void> {
+    const course = await this.repo.findOne({ where: { id: courseId } });
+    if (!course) {
+      throw new NotFoundException(`Course with id ${courseId} not found`);
+    }
+
+    this.eventEmitter.emit('course.completed', { userId, courseId });
+
+    const completedCount = await this.countCompletedCourses(userId);
+    this.eventEmitter.emit('course-count-changed', { userId, count: completedCount });
+  }
+
+  /** Count the number of courses a learner has completed. */
+  async countCompletedCourses(userId: string): Promise<number> {
+    const result = await this.repo
+      .createQueryBuilder('course')
+      .innerJoin('course.enrollments', 'enrollment')
+      .where('enrollment.userId = :userId', { userId })
+      .andWhere('enrollment.status = :status', { status: 'completed' })
+      .select('COUNT(DISTINCT course.id)', 'count')
+      .getRawOne<{ count: string }>();
+
+    return Number(result?.count ?? 0);
+  }
 
   /**
    * Get average rating for a course from reviews

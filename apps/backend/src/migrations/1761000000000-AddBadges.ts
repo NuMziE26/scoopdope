@@ -22,14 +22,21 @@ export class AddBadges1761000000000 implements MigrationInterface {
         "userId" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
         "badgeId" uuid NOT NULL REFERENCES "badges"("id") ON DELETE CASCADE,
         "earnedAt" timestamptz NOT NULL DEFAULT now(),
+        "mintedAt" timestamptz NULL,
+        "mintTransactionHash" varchar NULL,
         CONSTRAINT "UQ_user_badges_user_badge" UNIQUE ("userId", "badgeId")
       )
     `);
 
     await queryRunner.query(`CREATE INDEX "IDX_user_badges_user_id" ON "user_badges" ("userId")`);
+
+    await queryRunner.query(
+      `CREATE INDEX "IDX_user_badges_unminted" ON "user_badges" ("earnedAt") WHERE "mintedAt" IS NULL`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_user_badges_unminted"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_user_badges_user_id"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "user_badges"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "badges"`);
