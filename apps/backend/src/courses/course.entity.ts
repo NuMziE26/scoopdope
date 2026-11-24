@@ -39,8 +39,7 @@ export enum CourseVisibility {
 }
 
 @Entity('courses')
-@Index('IDX_courses_language', ['language'])
-@Index('IDX_courses_variant_group_id', ['variantGroupId'])
+@Index('IDX_courses_search_vector', ['searchVector'], { fulltext: true })
 export class Course {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -121,6 +120,14 @@ export class Course {
   rejectionNotes: string | null;
 
   /**
+   * Current content version of the course.
+   * Incremented when an instructor publishes a new version; enrollments
+   * freeze the version they started on so in-progress learners are unaffected.
+   */
+  @Column({ type: 'int', default: 1 })
+  version: number;
+
+  /**
    * Maximum number of students that can be enrolled simultaneously.
    * Null means unlimited.
    */
@@ -130,6 +137,20 @@ export class Course {
   /** Array of learning outcomes for the course */
   @Column({ type: 'jsonb', nullable: true })
   learningOutcomes: string[];
+
+  /**
+   * Generated full-text search vector over title and description.
+   * Weighted so title matches rank higher than description matches.
+   * Backed by a GIN index for efficient ts_rank queries.
+   */
+  @Column({
+    type: 'tsvector',
+    nullable: true,
+    select: false,
+    asExpression: `setweight(to_tsvector('english', coalesce(title, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')`,
+    generatedType: 'STORED',
+  })
+  searchVector: string;
 
   // Why: SET NULL preserves course when instructor is deleted; course remains accessible but unassigned.
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })

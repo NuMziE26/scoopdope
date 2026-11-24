@@ -175,6 +175,10 @@ export class CoursesService {
       });
     }
 
+    // NOTE: full-text search across courses, lessons and instructors is served
+    // by SearchService (GET /v1/search). Results there are tagged with their
+    // entity type ('course' | 'lesson' | 'instructor') and ranked by ts_rank.
+
     if (language) {
       qb.andWhere('course.language = :language', { language });
     }
@@ -363,6 +367,7 @@ export class CoursesService {
     course.status = CourseStatus.PUBLISHED;
     const saved = await this.repo.save(course);
     await this.invalidateCache();
+    await this.indexForSearch(saved);
     return saved;
   }
 
@@ -553,6 +558,29 @@ export class CoursesService {
       .getMany();
 
     return courses;
+  }
+
+  /**
+   * Index a course in the search index so it is discoverable via
+   * GET /v1/search. Course documents are tagged with the 'course' entity type.
+   */
+  async indexForSearch(course: Course): Promise<void> {
+    try {
+      await this.searchService.indexCourse(course);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to index course ${course.id} for search: ${message}`);
+    }
+  }
+
+  /** Remove a course from the search index (e.g. on delete or unpublish). */
+  async removeFromSearchIndex(courseId: string): Promise<void> {
+    try {
+      await this.searchService.removeCourse(courseId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to remove course ${courseId} from search index: ${message}`);
+    }
   }
 
   private async invalidateCache() {
