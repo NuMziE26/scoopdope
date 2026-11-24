@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Header,
+  NotFoundException,
   Param,
   Post,
   StreamableFile,
@@ -91,21 +92,41 @@ export class CredentialsController {
     return this.credentialsService.findByUser(userId);
   }
 
-  @Get('verify/:txHash')
-  @ApiOperation({ summary: 'Verify a credential on-chain by transaction hash' })
+  @Get('verify/:hash')
+  @ApiOperation({ summary: 'Public: Verify a credential by its on-chain hash' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   @ApiResponse({
     status: 200,
-    description: 'Verification result',
-    schema: { example: { valid: true, txHash: 'abc123' } },
+    description: 'Credential verification result',
+    schema: {
+      example: {
+        valid: true,
+        credentialHash: 'abc123',
+        txHash: 'abc123',
+        learnerName: 'Jane Doe',
+        courseName: 'Blockchain Basics',
+        issuedAt: '2024-01-01T00:00:00.000Z',
+        onChainVerified: true,
+      },
+    },
   })
-  @ApiResponse({ status: 404, description: 'Transaction not found' })
-  verify(@Param('txHash') txHash: string) {
-    return this.credentialsService.verify(txHash);
+  @ApiResponse({ status: 404, description: 'Credential not found' })
+  async verify(@Param('hash') hash: string) {
+    const credential = await this.credentialsService.findByHash(hash);
+    if (!credential) {
+      throw new NotFoundException('Credential not found');
+    }
+    return {
+      valid: true,
+      credentialHash: hash,
+      txHash: credential.txHash,
+      learnerName: credential.user?.username || credential.user?.email || 'Student',
+      courseName: credential.course?.title,
+      issuedAt: credential.issuedAt,
+      onChainVerified: Boolean(credential.txHash),
+    };
   }
 
   @Post(':id/revoke')

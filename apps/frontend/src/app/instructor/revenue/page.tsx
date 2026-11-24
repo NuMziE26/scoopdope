@@ -39,6 +39,10 @@ interface Stats {
   processedPayouts: number;
 }
 
+interface RevenueShare {
+  revenueSharePercent: number;
+}
+
 const TREND_ICON = { up: '↑', down: '↓', stable: '→' } as const;
 const TREND_COLOR = {
   up: 'text-green-600 dark:text-green-400',
@@ -80,6 +84,7 @@ export default function RevenueAnalyticsPage() {
   const [perCourse, setPerCourse] = useState<CourseRevenue[]>([]);
   const [projection, setProjection] = useState<Projection | null>(null);
   const [history, setHistory] = useState<PayoutRecord[]>([]);
+  const [revenueSharePercent, setRevenueSharePercent] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -90,13 +95,16 @@ export default function RevenueAnalyticsPage() {
       api.get(`/v1/payouts/instructor/${instructorId}/per-course`),
       api.get(`/v1/payouts/instructor/${instructorId}/projection`),
       api.get(`/v1/payouts/instructor/${instructorId}/history?limit=20`),
+      api.get(`/v1/instructors/${instructorId}/revenue-share`),
     ])
-      .then(([s, m, pc, proj, h]) => {
+      .then(([s, m, pc, proj, h, rs]) => {
         setStats(s.data);
         setMonthly(m.data ?? []);
         setPerCourse(pc.data ?? []);
         setProjection(proj.data);
         setHistory(h.data ?? []);
+        const share = (rs.data as RevenueShare)?.revenueSharePercent;
+        setRevenueSharePercent(typeof share === 'number' ? share : null);
       })
       .catch(() => {
         // Use mock data on error
@@ -113,6 +121,7 @@ export default function RevenueAnalyticsPage() {
         ]);
         setProjection({ projectedMonthly: 560, trend: 'up' });
         setHistory([]);
+        setRevenueSharePercent(70);
       })
       .finally(() => setLoading(false));
   }, [instructorId]);
@@ -160,6 +169,13 @@ export default function RevenueAnalyticsPage() {
                 ? `Trend: ${TREND_ICON[projection.trend]} ${projection.trend}`
                 : undefined
             }
+          />
+          <StatCard
+            label="Your Revenue Share"
+            value={
+              loading ? '…' : revenueSharePercent !== null ? `${revenueSharePercent}%` : '—'
+            }
+            sub="Applied to each payout"
           />
         </div>
 
@@ -212,6 +228,11 @@ export default function RevenueAnalyticsPage() {
         <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3">
             Payout History
+            {revenueSharePercent !== null && (
+              <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                Your share: {revenueSharePercent}%
+              </span>
+            )}
           </h2>
           <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
             <table className="w-full text-sm">

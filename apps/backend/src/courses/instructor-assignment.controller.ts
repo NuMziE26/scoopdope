@@ -3,10 +3,14 @@ import {
   Post,
   Delete,
   Get,
+  Patch,
   Param,
+  Body,
   HttpCode,
   HttpStatus,
   UseGuards,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -23,6 +28,8 @@ import { InstructorAssignmentService } from './instructor-assignment.service';
 @ApiTags('instructor-assignments')
 @Controller()
 export class InstructorAssignmentController {
+  private readonly logger = new Logger(InstructorAssignmentController.name);
+
   constructor(private readonly service: InstructorAssignmentService) {}
 
   /**
@@ -162,5 +169,77 @@ export class InstructorAssignmentController {
   @ApiResponse({ status: 429, description: 'Too many requests' })
   listByInstructor(@Param('id') id: string) {
     return this.service.listByInstructor(id);
+  }
+
+  /**
+   * PATCH /v1/admin/instructors/:id/revenue-share
+   *
+   * Update the revenue share percentage for an instructor. Admin-only.
+   */
+  @Patch('admin/instructors/:id/revenue-share')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Update an instructor's revenue share",
+    description:
+      'Sets the percentage of course revenue paid out to the instructor. ' +
+      'Must be between 0 and 100. Requires ADMIN role.',
+  })
+  @ApiParam({ name: 'id', description: 'UUID of the instructor user' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['revenueSharePercent'],
+      properties: {
+        revenueSharePercent: {
+          type: 'number',
+          minimum: 0,
+          maximum: 100,
+          example: 70,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Revenue share updated',
+    schema: {
+      example: {
+        id: 'uuid',
+        instructorId: 'uuid',
+        revenueSharePercent: 70,
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid revenue share percentage' })
+  @ApiResponse({ status: 401, description: 'Unauthorized – JWT required' })
+  @ApiResponse({ status: 403, description: 'Forbidden – ADMIN role required' })
+  @ApiResponse({ status: 404, description: 'Instructor not found' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async updateRevenueShare(
+    @Param('id') id: string,
+    @Body() body: { revenueSharePercent: number },
+  ) {
+    const value = body?.revenueSharePercent;
+
+    if (
+      typeof value !== 'number' ||
+      !Number.isFinite(value) ||
+      value < 0 ||
+      value > 100
+    ) {
+      throw new BadRequestException(
+        'revenueSharePercent must be a number between 0 and 100',
+      );
+    }
+
+    const updated = await this.service.updateRevenueShare(id, value);
+
+    this.logger.log(
+      `Revenue share for instructor ${id} updated to ${value}%`,
+    );
+
+    return updated;
   }
 }

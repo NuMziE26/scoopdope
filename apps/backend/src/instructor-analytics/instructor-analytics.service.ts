@@ -95,6 +95,7 @@ export class InstructorAnalyticsService {
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
     @Inject(CACHE_MANAGER) private cache: Cache,
+    private instructorAssignmentService: InstructorAssignmentService,
   ) {}
 
   /**
@@ -266,6 +267,7 @@ export class InstructorAnalyticsService {
     totalEnrollments: number;
     totalCompletions: number;
     overallCompletionRate: number;
+    revenueSharePercent: number;
     courses: InstructorCourseAnalytics[];
   }> {
     const cacheKey = `${this.CACHE_PREFIX}instructor:${instructorId}:${filter.from?.toISOString() ?? ''}:${filter.to?.toISOString() ?? ''}`;
@@ -303,11 +305,15 @@ export class InstructorAnalyticsService {
         ? Math.round((totalCompletions / totalEnrollments) * 10000) / 100
         : 0;
 
+    const revenueSharePercent =
+      await this.instructorAssignmentService.getRevenueSharePercent(instructorId);
+
     const result = {
       totalStudents,
       totalEnrollments,
       totalCompletions,
       overallCompletionRate,
+      revenueSharePercent,
       courses,
     };
 
