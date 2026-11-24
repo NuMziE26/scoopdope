@@ -20,6 +20,7 @@ import { Roles } from '../auth/roles.decorator';
 import { CoursesService } from './courses.service';
 import { AuditService } from '../audit/audit.service';
 import { AuditAction } from '../audit/audit-log.entity';
+import { AuditLog } from '../audit/audit-log.decorator';
 import { EnrollmentsService } from '../enrollments/enrollments.service';
 
 @ApiTags('admin-courses')
@@ -92,6 +93,7 @@ export class AdminCoursesController {
 
   @Post(':id/approve')
   @Roles('admin')
+  @AuditLog('admin.course_approved')
   @ApiOperation({ summary: 'Approve a pending course for publication' })
   @ApiResponse({ status: 200, description: 'Course approved' })
   @ApiResponse({ status: 400, description: 'Course not in pending status' })
@@ -127,6 +129,7 @@ export class AdminCoursesController {
 
   @Post(':id/reject')
   @Roles('admin')
+  @AuditLog('admin.course_rejected')
   @ApiOperation({ summary: 'Reject a pending course' })
   @ApiResponse({ status: 200, description: 'Course rejected' })
   @ApiResponse({ status: 400, description: 'Course not in pending status' })
@@ -233,6 +236,7 @@ export class AdminCoursesController {
 
   @Patch(':id/archive')
   @Roles('admin')
+  @AuditLog('admin.course_archived')
   @ApiOperation({ summary: 'Archive a published course' })
   @ApiResponse({ status: 200, description: 'Course archived' })
   @ApiResponse({ status: 400, description: 'Course not in published status' })
@@ -268,6 +272,7 @@ export class AdminCoursesController {
 
   @Patch(':id/unarchive')
   @Roles('admin')
+  @AuditLog('admin.course_unarchived')
   @ApiOperation({ summary: 'Unarchive an archived course' })
   @ApiResponse({ status: 200, description: 'Course unarchived' })
   @ApiResponse({ status: 400, description: 'Course not in archived status' })
@@ -303,6 +308,7 @@ export class AdminCoursesController {
 
   @Delete(':id')
   @Roles('admin')
+  @AuditLog('admin.course_deleted')
   @ApiOperation({ summary: 'Delete a course (admin only)' })
   @ApiResponse({ status: 200, description: 'Course deleted' })
   @ApiResponse({ status: 400, description: 'Cannot delete published or pending courses' })
