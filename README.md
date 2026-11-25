@@ -384,3 +384,6 @@ Quick summary:
 
 <!-- handsoff-issue-1336 -->
 - #1336: Implement User Deactivation and Reactivation
+
+<!-- handsoff-issue-1287 -->
+- #1287: Add Redis Caching for Course Detail Endpoint
