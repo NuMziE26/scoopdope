@@ -384,3 +384,6 @@ Quick summary:
 
 <!-- handsoff-issue-1336 -->
 - #1336: Implement User Deactivation and Reactivation
+
+<!-- handsoff-issue-1292 -->
+- #1292: Add Idempotency Keys to Payment Endpoints
