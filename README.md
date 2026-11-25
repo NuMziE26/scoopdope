@@ -384,3 +384,6 @@ Quick summary:
 
 <!-- handsoff-issue-1336 -->
 - #1336: Implement User Deactivation and Reactivation
+
+<!-- handsoff-issue-1283 -->
+- #1283: Fix Password Reset Flow Security
