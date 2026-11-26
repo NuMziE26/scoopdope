@@ -385,5 +385,5 @@ Quick summary:
 <!-- handsoff-issue-1336 -->
 - #1336: Implement User Deactivation and Reactivation
 
-<!-- handsoff-issue-1283 -->
-- #1283: Fix Password Reset Flow Security
+<!-- handsoff-issue-1292 -->
+- #1292: Add Idempotency Keys to Payment Endpoints
