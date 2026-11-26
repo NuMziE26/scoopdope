@@ -387,3 +387,6 @@ Quick summary:
 
 <!-- handsoff-issue-1292 -->
 - #1292: Add Idempotency Keys to Payment Endpoints
+
+<!-- handsoff-issue-1313 -->
+- #1313: Implement Assignment Submission and Grading
