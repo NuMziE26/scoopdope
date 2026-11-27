@@ -385,5 +385,8 @@ Quick summary:
 <!-- handsoff-issue-1336 -->
 - #1336: Implement User Deactivation and Reactivation
 
-<!-- handsoff-issue-1287 -->
-- #1287: Add Redis Caching for Course Detail Endpoint
+<!-- handsoff-issue-1292 -->
+- #1292: Add Idempotency Keys to Payment Endpoints
+
+<!-- handsoff-issue-1313 -->
+- #1313: Implement Assignment Submission and Grading
